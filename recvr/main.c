@@ -117,13 +117,6 @@ static void nrf24_init(void)
 	spi_send(0b00111111);
 	SS_NRF24_HIGH;
 	delay_ms(10); // required value is 2ms or something
-	// flush tx, rx
-	SS_NRF24_LOW;
-	spi_send(0b11100001);
-	SS_NRF24_HIGH;
-	SS_NRF24_LOW;
-	spi_send(0b11100010);
-	SS_NRF24_HIGH;
 	// write channel 77
 	SS_NRF24_LOW;
 	spi_send(0x20 | 0x05); // RF_CH == 0x05
@@ -143,6 +136,20 @@ static void nrf24_init(void)
 
 	// set CE high
 	PORTD |= (1<<0);
+	delay_ms(1);
+
+	// clear IRQ
+	SS_NRF24_LOW;
+	spi_send(0x20 | 0x07); // STATUS
+	spi_send(0b01110000);
+	SS_NRF24_HIGH;
+	// flush tx, rx
+	SS_NRF24_LOW;
+	spi_send(0b11100001);
+	SS_NRF24_HIGH;
+	SS_NRF24_LOW;
+	spi_send(0b11100010);
+	SS_NRF24_HIGH;
 }
 
 
@@ -214,7 +221,7 @@ int main(void)
 		while (1) {
 			// clear IRQ
 			SS_NRF24_LOW;
-			spi_send(0x20 | 0x07); // status
+			spi_send(0x20 | 0x07); // STATUS
 			spi_send(0b01110000);
 			SS_NRF24_HIGH;
 
