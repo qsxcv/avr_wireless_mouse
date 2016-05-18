@@ -248,13 +248,12 @@ int main(void)
 				pwhl = nwhl;
 			}
 
-			// check if there's still stuff in rx fifo
+			// check if there's new data in rx fifo
 			SS_NRF24_LOW;
-			spi_send(0x17);
-			const uint8_t fifo_status = spi_recv();
+			spi_send(0xff); // NOP, read STATUS register
+			const uint8_t status = SPDR;
 			SS_NRF24_HIGH;
-			// break if nothing left
-			if (fifo_status & (1<<0)) // RX_EMPTY
+			if ((status & (0x0e)) == 0x0e) // if RX FIFO empty
 				break;
 		}
 
@@ -284,7 +283,7 @@ PORTD &= ~(1<<6);
 		while (!usb_configured())
 			SREG = intr_state;
 		cli();
-		//
+
 		UENUM = MOUSE_ENDPOINT;
 		if (UESTA0X & (1<<NBUSYBK0)) { // untransmitted data still in bank
 			UEINTX |= (1<<RXOUTI); // kill bank; RXOUTI == KILLBK
