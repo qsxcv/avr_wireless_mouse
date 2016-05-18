@@ -180,14 +180,11 @@ int main(void)
 
 	// set px, py, pwhl to new data first time
 	for (uint8_t first = 1; ;) {
-		const uint8_t intr_state = SREG;
-
 		// sync main loop to usb frames (1ms) by going idle until woken
 		// by SOFI interrupt
 		UDINT &= ~(1<<SOFI);
 		UDIEN |= (1<<SOFE);
-		sleep_mode();
-		cli();
+		sei(); sleep_mode(); cli();
 		UDIEN &= ~(1<<SOFE);
 		// reset timer
 		TCNT1 = 0;
@@ -197,18 +194,14 @@ int main(void)
 		PCICR |= (1<<PCIE0);
 		TIFR1 |= (1<<OCF1A);
 		TIMSK1 |= (1<<OCIE1A);
-		SREG = intr_state;
 		// go idle until one or the other happens.
-		sleep_mode();
+		sei(); sleep_mode(); cli();
 		// disable interrupts
-		cli();
 		TIMSK1 &= ~(1<<OCIE1A);
 		PCICR &= ~(1<<PCIE0);
 		// if IRQ is still high, no packet was received, start over.
-		if (PINB & (1<<7)) {
-			SREG = intr_state;
+		if (PINB & (1<<7))
 			continue;
-		}
 
 		// get offset from ideal timing
 		const union motion_data offset = {.all = (TCNT1 - 7000)};
@@ -280,9 +273,11 @@ PORTD &= ~(1<<6);
 
 		// usb
 		// first make sure it's configured
-		while (!usb_configured())
-			SREG = intr_state;
-		cli();
+		if (!usb_configured()) {
+			sei();
+			while (!usb_configured());
+			cli();
+		}
 
 		UENUM = MOUSE_ENDPOINT;
 		if (UESTA0X & (1<<NBUSYBK0)) { // untransmitted data still in bank
@@ -311,6 +306,5 @@ PORTD &= ~(1<<6);
 		}
 
 		first = 0;
-		SREG = intr_state;
 	}
 }
